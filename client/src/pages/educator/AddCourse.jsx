@@ -1,9 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState } from 'react'
 import uniqid from 'uniqid'
 import Quill from 'quill'
 import { assets } from '../../assets/assets';
+import { AppContext } from '../../context/AppContext';
 
 const AddCourse = () => {
+
+  const {apiFetch}=useContext(AppContext)
 
   const quillRef=useRef(null);
   const editorRef=useRef(null);
@@ -88,7 +91,42 @@ const AddCourse = () => {
   };
 
   const handleSubmit=async(e)=>{
-    e.preventDefault()
+    try {
+      e.preventDefault()
+      if(!image){
+        return alert('Thumbnail Not Selected')
+      }
+      if(chapters.length===0){
+        return alert('Add at least one chapter with a lecture')
+      }
+
+      const courseData={
+        courseTitle,
+        courseDescription: quillRef.current.root.innerHTML,
+        coursePrice: Number(coursePrice),
+        discount: Number(discount),
+        courseContent: chapters.map(({collapsed,...chapter})=>chapter),
+      }
+
+      const formData=new FormData()
+      formData.append('courseData',JSON.stringify(courseData))
+      formData.append('image',image)
+
+      const data=await apiFetch('/api/educator/add-course',{method:'POST',formData})
+      if(data.success){
+        alert(data.message)
+        setCourseTitle('')
+        setCoursePrice(0)
+        setDiscount(0)
+        setImage(null)
+        setChapters([])
+        quillRef.current.root.innerHTML=''
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert(error.message)
+    }
   };
 
   useEffect(()=>{
@@ -149,7 +187,7 @@ const AddCourse = () => {
                 </div>
 
                 <span className='text-gray-500'>{chapter.chapterContent.length} Lectures</span>
-                <img src={assets.cross_icon} alt="" className='cursor-pointer' onClick={()=>handleLecture('remove',
+                <img src={assets.cross_icon} alt="" className='cursor-pointer' onClick={()=>handleChapter('remove',
                   chapter.chapterId)}/>
               </div>
               {!chapter.collapsed && (

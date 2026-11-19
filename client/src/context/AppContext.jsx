@@ -1,7 +1,7 @@
 import { createContext, useEffect, useState } from "react";
-import { dummyCourses } from "../assets/assets";
 import { useNavigate } from "react-router-dom";
 import humanizeDuration from 'humanize-duration'
+import {useAuth,useUser} from '@clerk/clerk-react'
 
 export const AppContext=createContext();
 
@@ -10,14 +10,80 @@ export const AppContextProvider = (props)=>{
     const currency=import.meta.env.VITE_CURRENCY
     const navigate=useNavigate();
 
+    const {getToken}=useAuth()
+    const {user}=useUser()
+
     const [allCourses,setAllCourses]=useState([])
-    const [isEducator,setisEducator]=useState(true)
+    const [isEducator,setisEducator]=useState(false)
     const [enrolledCourses,setEnrolledCourses]=useState([])
+    const [userData,setUserData]=useState(null)
+
+    const backendUrl=import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000'
+
+    //helper: call the backend (JSON or FormData) with the Clerk token attached when logged in
+    const apiFetch=async (path,{method='GET',body,formData}={})=>{
+        const headers={}
+        const token=await getToken()
+        if(token) headers.Authorization=`Bearer ${token}`
+        let payload
+        if(formData){
+            payload=formData
+        } else if(body){
+            headers['Content-Type']='application/json'
+            payload=JSON.stringify(body)
+        }
+        const res=await fetch(`${backendUrl}${path}`,{method,headers,body:payload})
+        return res.json()
+    }
 
 
     //fetch all courses
     const fetchAllCourses=async () =>{
-        setAllCourses(dummyCourses)
+        try {
+            const data=await apiFetch('/api/course/all')
+            if(data.success){
+                setAllCourses(data.courses)
+            } else {
+                console.error(data.message)
+            }
+        } catch (error) {
+            console.error(error.message)
+        }
+    }
+
+    //fetch user data
+    const fetchUserData=async ()=>{
+        if(user?.publicMetadata?.role==='educator'){
+            setisEducator(true)
+        } else {
+            setisEducator(false)
+        }
+        try {
+            const data=await apiFetch('/api/user/data')
+            if(data.success){
+                setUserData(data.user)
+            } else {
+                console.error(data.message)
+            }
+        } catch (error) {
+            console.error(error.message)
+        }
+    }
+
+    //become educator
+    const becomeEducator=async ()=>{
+        try {
+            const data=await apiFetch('/api/educator/update-role')
+            if(data.success){
+                await user.reload()
+                setisEducator(true)
+                navigate('/educator')
+            } else {
+                alert(data.message)
+            }
+        } catch (error) {
+            alert(error.message)
+        }
     }
 
     //function to calculate average rating of course
@@ -62,17 +128,41 @@ export const AppContextProvider = (props)=>{
 
     //Fetch User Enrolled Courses
     const fetchUserEnrolledCourses=async ()=>{
-        setEnrolledCourses(dummyCourses)
+        try {
+            const data=await apiFetch('/api/user/enrolled-courses')
+            if(data.success){
+                setEnrolledCourses(data.enrolledCourses.reverse())
+            } else {
+                console.error(data.message)
+            }
+        } catch (error) {
+            console.error(error.message)
+        }
     }
 
 useEffect(()=>{
     fetchAllCourses()
-    fetchUserEnrolledCourses()
 },[])
+
+const logToken=async ()=>{
+    console.log(await getToken());
+}
+useEffect(()=>{
+    if(user){
+        logToken()
+        fetchUserData()
+        fetchUserEnrolledCourses()
+    } else {
+        setisEducator(false)
+        setUserData(null)
+        setEnrolledCourses([])
+    }
+},[user])
 
     const value={
         currency,allCourses,navigate,calculateRating,isEducator,setisEducator,calculateNoOfLectures,calculateCourseDuration
-        ,calculateChapterTime,enrolledCourses,fetchUserEnrolledCourses
+        ,calculateChapterTime,enrolledCourses,fetchUserEnrolledCourses,
+        backendUrl,apiFetch,userData,fetchAllCourses,becomeEducator,user
     }
 
     return (

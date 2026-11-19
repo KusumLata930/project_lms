@@ -1,18 +1,30 @@
-import React, { useEffect, useState } from 'react'
-import { dummyStudentEnrolled } from '../../assets/assets'
+import React, { useContext, useEffect, useState } from 'react'
+import { AppContext } from '../../context/AppContext'
 import Loading from '../../components/student/Loading'
 
 const StudentsEnrolled = () => {
 
+  const {apiFetch,isEducator}=useContext(AppContext)
   const [enrolledStudents,setEnrolledStudents]=useState(null)
 
   const fetchEnrolledStudents =async() => {
-    setEnrolledStudents(dummyStudentEnrolled)
+    try {
+      const data=await apiFetch('/api/educator/enrolled-students')
+      if(data.success){
+        setEnrolledStudents(data.enrolledStudents.reverse())
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert(error.message)
+    }
   }
 
   useEffect(() => {
-    fetchEnrolledStudents()
-  },[])
+    if(isEducator){
+      fetchEnrolledStudents()
+    }
+  },[isEducator])
 
   return enrolledStudents ? (
     <div className='min-h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0'>

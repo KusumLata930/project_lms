@@ -1,3 +1,6 @@
+import { Webhook } from "svix"
+import User from "../models/User.js"
+
 export const clerkWebHooks = async (req, res) => {
     try {
         const whook = new Webhook(process.env.CLERK_WEBHOOK_SECRET)
@@ -18,7 +21,7 @@ export const clerkWebHooks = async (req, res) => {
                 const userData = {
                     _id: data.id,
                     email: data.email_addresses[0].email_address,
-                    name: data.first_name + " " + data.last_name,
+                    name: [data.first_name, data.last_name].filter(Boolean).join(" ") || "User",
                     imageUrl: data.image_url,
                 }
 
@@ -30,7 +33,7 @@ export const clerkWebHooks = async (req, res) => {
             case 'user.updated': {
                 const userData = {
                     email: data.email_addresses[0].email_address,
-                    name: data.first_name + " " + data.last_name,
+                    name: [data.first_name, data.last_name].filter(Boolean).join(" ") || "User",
                     imageUrl: data.image_url,
                 }
 

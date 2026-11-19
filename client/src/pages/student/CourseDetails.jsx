@@ -16,17 +16,51 @@ const CourseDetails = () => {
   const [isAlreadyEnrolled,setIsAlreadyEnrolled]=useState(false)
   const [playerData,setPlayerData]=useState(null)
 
-  const {allCourses,calculateRating,calculateNoOfLectures,calculateCourseDuration
-    ,calculateChapterTime,currency}=useContext(AppContext)
+  const {calculateRating,calculateNoOfLectures,calculateCourseDuration
+    ,calculateChapterTime,currency,apiFetch,user,enrolledCourses,fetchUserEnrolledCourses,navigate}=useContext(AppContext)
 
   const fetchCourseData=async()=>{
-    const findCourse=allCourses.find(course => course._id===id)
-    setCourseData(findCourse);
+    try {
+      const data=await apiFetch(`/api/course/${id}`)
+      if(data.success){
+        setCourseData(data.courseData)
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert(error.message)
+    }
   }
 
   useEffect(()=>{
     fetchCourseData()
-  },[allCourses])
+  },[id])
+
+  useEffect(()=>{
+    if(courseData){
+      setIsAlreadyEnrolled(enrolledCourses.some(course=>course._id===courseData._id))
+    }
+  },[enrolledCourses,courseData])
+
+  const enrollCourse=async()=>{
+    try {
+      if(!user){
+        return alert('Login to Enroll')
+      }
+      if(isAlreadyEnrolled){
+        return navigate('/player/'+courseData._id)
+      }
+      const data=await apiFetch('/api/user/purchase',{method:'POST',body:{courseId:courseData._id}})
+      if(data.success){
+        await fetchUserEnrolledCourses()
+        navigate('/my-enrollments')
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert(error.message)
+    }
+  }
 
 const toggleSection=(index)=>{
   setOpenSections(prev=>(
@@ -63,7 +97,7 @@ const toggleSection=(index)=>{
 
           <p>{courseData.enrolledStudents.length} {courseData.enrolledStudents.length>1 ?'students':'student'}</p>
       </div>
-      <p className='text-sm'>Course by <span className='text-blue-600 underline'>GreatStack</span></p>
+      <p className='text-sm'>Course by <span className='text-blue-600 underline'>{courseData.educator?.name}</span></p>
 
       <div className='pt-8 text-gray-800'>
         <h2 className='text-xl font-semibold'>Course Structure</h2>
@@ -162,7 +196,7 @@ const toggleSection=(index)=>{
 
           </div>
 
-          <button className='md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium'>
+          <button onClick={enrollCourse} className='md:mt-6 mt-4 w-full py-3 rounded bg-blue-600 text-white font-medium'>
             {isAlreadyEnrolled ? 'Already Enrolled' : 'Enroll Now'}</button>
 
           <div className='pt-6'>

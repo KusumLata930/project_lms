@@ -1,16 +1,12 @@
+
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
-  "main": "server.js",
   "type": "module",
   "scripts": {
-    "server": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@clerk/express": "^1.7.67",
     "cloudinary": "^2.9.0",

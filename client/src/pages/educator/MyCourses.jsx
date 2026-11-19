@@ -4,17 +4,28 @@ import Loading from '../../components/student/Loading'
 
 const MyCourses = () => {
 
-  const {currency,allCourses}=useContext(AppContext)
+  const {currency,apiFetch,isEducator}=useContext(AppContext)
 
   const [courses, setCourses]=useState(null)
 
-  const fetchEducatorCourses = async()=>(
-    setCourses(allCourses)
-  )
+  const fetchEducatorCourses = async()=>{
+    try {
+      const data=await apiFetch('/api/educator/courses')
+      if(data.success){
+        setCourses(data.courses)
+      } else {
+        alert(data.message)
+      }
+    } catch (error) {
+      alert(error.message)
+    }
+  }
 
   useEffect(() =>{
-    fetchEducatorCourses()
-  },[])
+    if(isEducator){
+      fetchEducatorCourses()
+    }
+  },[isEducator])
 
   return courses ? (
     <div className='h-screen flex flex-col items-start justify-between md:p-8 md:pb-0 p-4 pt-8 pb-0'>
